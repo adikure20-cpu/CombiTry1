@@ -2,6 +2,7 @@ import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.io.*;
+import java.net.URI;
 import java.util.*;
 import java.util.List;
 
@@ -10,8 +11,63 @@ public class CodeDistributorApp {
     private JFrame frame;
     private File selectedCSV;
 
+    // Your app's current version
+    private static final String currentVersion = "1.0.4";
+    // URL to your raw latest.txt on GitHub (make sure this is raw URL!)
+    private static final String LATEST_URL = "https://raw.githubusercontent.com/adikure20-cpu/CombiTry1/main/latest.txt";
+
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new CodeDistributorApp().createUI());
+        SwingUtilities.invokeLater(() -> {
+            JFrame tempFrame = new JFrame(); // For update popup dialog parent
+            checkForUpdate(tempFrame);        // Check for updates before UI launch
+            new CodeDistributorApp().createUI();
+        });
+    }
+
+    // Version comparison helper: returns >0 if v1 > v2, 0 if equal, <0 if v1 < v2
+    public static int compareVersions(String v1, String v2) {
+        String[] parts1 = v1.trim().split("\\.");
+        String[] parts2 = v2.trim().split("\\.");
+        int length = Math.max(parts1.length, parts2.length);
+        for (int i = 0; i < length; i++) {
+            int p1 = i < parts1.length ? Integer.parseInt(parts1[i]) : 0;
+            int p2 = i < parts2.length ? Integer.parseInt(parts2[i]) : 0;
+            if (p1 < p2) return -1;
+            if (p1 > p2) return 1;
+        }
+        return 0;
+    }
+
+    // Check for update by reading version and download URL from latest.txt on GitHub
+    public static void checkForUpdate(Component parent) {
+        try {
+            java.net.URL url = new java.net.URL(LATEST_URL);
+            BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
+            String latestVersion = in.readLine();
+            String downloadUrl = in.readLine();
+            in.close();
+
+            // Debug output (useful to see if whitespace or version mismatch)
+            System.out.println("DEBUG: currentVersion='" + currentVersion + "'");
+            System.out.println("DEBUG: latestVersion='" + latestVersion + "'");
+            System.out.println("DEBUG: downloadUrl='" + downloadUrl + "'");
+
+            if (latestVersion != null && downloadUrl != null
+                    && compareVersions(latestVersion, currentVersion) > 0) {
+                int option = JOptionPane.showConfirmDialog(parent,
+                        "A new version (" + latestVersion + ") is available!\nDo you want to download it?",
+                        "Update Available",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+                if (option == JOptionPane.YES_OPTION) {
+                    Desktop.getDesktop().browse(new URI(downloadUrl));
+                }
+            }
+        } catch (Exception e) {
+            // Fail silently or log error for offline or connection issues
+            System.out.println("DEBUG: Exception in update check: " + e);
+        }
     }
 
     private void createUI() {
@@ -107,7 +163,7 @@ public class CodeDistributorApp {
         frame.setVisible(true);
     }
 
-    // ... rest of your methods unchanged ...
+    // Rest of your methods unchanged, but here for completeness:
 
     private List<String> loadShopIds(File csvFile) throws IOException {
         Set<String> idSet = new LinkedHashSet<>();
