@@ -1,0 +1,2 @@
+1.0.1
+https://github.com/adikure20-cpu/CombiTry1/releases/latest
