@@ -2,11 +2,11 @@
 
 # Variables — EDIT THESE
 JAR_PATH="out/artifacts/CombiTry1_jar/CombiTry1.jar"   # Adjust if jar path differs
-RELEASE_VERSION="v1.0.8"                               # Your new version tag, e.g. v1.0.8
+RELEASE_VERSION="v1.0.9"                               # Your new version tag, e.g. v1.0.8
 RELEASE_TITLE="Version $RELEASE_VERSION"
 RELEASE_BODY="Automated release $RELEASE_VERSION with new features and fixes."
 
-# Extract version number without 'v' for latest.txt (e.g., "1.0.8")
+# Extract version number without 'v' for latest.txt (e.g., "1.0.9")
 VERSION_NUMBER="${RELEASE_VERSION#v}"
 
 # Construct download URL for GitHub release asset
