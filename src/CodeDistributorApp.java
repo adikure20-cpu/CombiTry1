@@ -12,7 +12,7 @@ public class CodeDistributorApp {
     private File selectedCSV;
 
     // Your app's current version
-    private static final String currentVersion = "1.0.4";
+    private static final String currentVersion = "1.0.9";
     // URL to your raw latest.txt on GitHub (make sure this is raw URL!)
     private static final String LATEST_URL = "https://raw.githubusercontent.com/adikure20-cpu/CombiTry1/main/latest.txt";
 
