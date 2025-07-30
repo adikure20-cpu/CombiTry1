@@ -11,7 +11,7 @@ public class CodeDistributorApp {
     private JFrame frame;
     private File selectedCSV;
 
-    private static final String currentVersion = "1.0.12";
+    private static final String currentVersion = "1.0.13";
     private static final String LATEST_URL = "https://raw.githubusercontent.com/adikure20-cpu/CombiTry1/main/latest.txt";
 
     public static void main(String[] args) {
