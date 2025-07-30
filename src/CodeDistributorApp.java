@@ -3,6 +3,8 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.io.*;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.List;
 
@@ -11,7 +13,7 @@ public class CodeDistributorApp {
     private JFrame frame;
     private File selectedCSV;
 
-    private static final String currentVersion = "1.0.13";
+    private static final String currentVersion = "1.0.14";
     private static final String LATEST_URL = "https://raw.githubusercontent.com/adikure20-cpu/CombiTry1/main/latest.txt";
 
     public static void main(String[] args) {
@@ -46,17 +48,58 @@ public class CodeDistributorApp {
             if (latestVersion != null && downloadUrl != null
                     && compareVersions(latestVersion, currentVersion) > 0) {
                 int option = JOptionPane.showConfirmDialog(parent,
-                        "A new version (" + latestVersion + ") is available!\nDo you want to download it?",
+                        "A new version (" + latestVersion + ") is available!\nDo you want to update now?",
                         "Update Available",
                         JOptionPane.YES_NO_OPTION,
                         JOptionPane.INFORMATION_MESSAGE
                 );
+
                 if (option == JOptionPane.YES_OPTION) {
-                    Desktop.getDesktop().browse(new URI(downloadUrl));
+                    JOptionPane.showMessageDialog(parent,
+                            "Updating now... Please wait.",
+                            "Updating",
+                            JOptionPane.INFORMATION_MESSAGE);
+                    downloadAndLaunchUpdate(downloadUrl);
                 }
             }
         } catch (Exception e) {
-            System.out.println("DEBUG: Exception in update check: " + e);
+            System.out.println("DEBUG: Exception in update check: " + e.getMessage());
+        }
+    }
+
+    private static void downloadAndLaunchUpdate(String downloadUrl) {
+        try {
+            File tempJar = File.createTempFile("CombiTry1_update", ".jar");
+            tempJar.deleteOnExit();
+
+            try (BufferedInputStream in = new BufferedInputStream(new java.net.URL(downloadUrl).openStream());
+                 FileOutputStream fileOutputStream = new FileOutputStream(tempJar)) {
+                byte[] dataBuffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = in.read(dataBuffer, 0, 1024)) != -1) {
+                    fileOutputStream.write(dataBuffer, 0, bytesRead);
+                }
+            }
+
+            // Get current JAR path
+            String pathToThisJar = new File(CodeDistributorApp.class.getProtectionDomain()
+                    .getCodeSource().getLocation().toURI()).getPath();
+            File currentJar = new File(pathToThisJar);
+
+            // Replace the current JAR with the new one
+            Files.copy(tempJar.toPath(), currentJar.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+            // Relaunch the updated JAR
+            new ProcessBuilder("java", "-jar", currentJar.getAbsolutePath()).start();
+
+            // Exit the old app
+            System.exit(0);
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null,
+                    "Failed to update: " + e.getMessage(),
+                    "Update Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -129,32 +172,15 @@ public class CodeDistributorApp {
             }
         });
 
-        frame.add(uploadButton);
-        frame.add(fileLabel);
-
-        frame.add(new JLabel("Total €5 Codes (5FB):"));
-        frame.add(total5Field);
-
-        frame.add(new JLabel("Total €10 Codes (10FB):"));
-        frame.add(total10Field);
-
-        frame.add(new JLabel("Total €5 RFB Codes (5RFB):"));
-        frame.add(total5RFBField);
-
-        frame.add(new JLabel("Total €10 RFB Codes (10RFB):"));
-        frame.add(total10RFBField);
-
-        frame.add(new JLabel("Priority 200 (IDs, comma separated):"));
-        frame.add(priority200Field);
-
-        frame.add(new JLabel("Priority 100 (IDs, comma separated):"));
-        frame.add(priority100Field);
-
-        frame.add(new JLabel("Priority 50 (IDs, comma separated):"));
-        frame.add(priority50Field);
-
-        frame.add(new JLabel()); // spacer
-        frame.add(createButton);
+        frame.add(uploadButton); frame.add(fileLabel);
+        frame.add(new JLabel("Total €5 Codes (5FB):")); frame.add(total5Field);
+        frame.add(new JLabel("Total €10 Codes (10FB):")); frame.add(total10Field);
+        frame.add(new JLabel("Total €5 RFB Codes (5RFB):")); frame.add(total5RFBField);
+        frame.add(new JLabel("Total €10 RFB Codes (10RFB):")); frame.add(total10RFBField);
+        frame.add(new JLabel("Priority 200 (IDs, comma or space separated):")); frame.add(priority200Field);
+        frame.add(new JLabel("Priority 100 (IDs):")); frame.add(priority100Field);
+        frame.add(new JLabel("Priority 50 (IDs):")); frame.add(priority50Field);
+        frame.add(new JLabel()); frame.add(createButton);
 
         frame.setVisible(true);
     }
@@ -168,32 +194,24 @@ public class CodeDistributorApp {
             }
 
             String line;
-            int lineNumber = 2;
             while ((line = br.readLine()) != null) {
                 line = line.trim();
                 if (line.isEmpty()) continue;
-
                 String cleaned = line.replaceAll("[^0-9]", "");
-
-                if (!cleaned.matches("\\d+")) {
-                    throw new IOException("Invalid Shop ID at line " + lineNumber + ": \"" + line + "\". Only numeric IDs allowed.");
+                if (cleaned.matches("\\d+")) {
+                    idSet.add(cleaned);
                 }
-
-                idSet.add(cleaned);
-                lineNumber++;
             }
         }
-
         if (idSet.isEmpty()) {
             throw new IOException("CSV contains no valid Shop IDs.");
         }
-
         return new ArrayList<>(idSet);
     }
 
     private List<String> parsePriorityShops(String input, List<String> allShopIds) {
         Set<String> validIds = new LinkedHashSet<>();
-        String[] parts = input.split("[,;\\s]+");  // Split on comma, semicolon, whitespace, tabs, etc.
+        String[] parts = input.split("[,;\\s]+");
         for (String id : parts) {
             String trimmed = id.trim();
             if (!trimmed.isEmpty() && allShopIds.contains(trimmed)) {
@@ -202,7 +220,6 @@ public class CodeDistributorApp {
         }
         return new ArrayList<>(validIds);
     }
-
 
     private Map<String, Integer> distributeCodes(List<String> allShops,
                                                  List<String> prio200, List<String> prio100, List<String> prio50,
@@ -216,7 +233,6 @@ public class CodeDistributorApp {
 
         int fixedTotal = prio200.size() * 200 + prio100.size() * 100 + prio50.size() * 50;
 
-        // Assign fixed values to priority shops
         for (String id : prio200) result.put(id, 200);
         for (String id : prio100) result.put(id, 100);
         for (String id : prio50) result.put(id, 50);
@@ -224,7 +240,6 @@ public class CodeDistributorApp {
         int remaining = total - fixedTotal;
         if (remaining < 0) remaining = 0;
 
-        // Distribute remaining codes to non-priority shops
         List<String> nonPriorityShops = new ArrayList<>();
         for (String shop : allShops) {
             if (!prioritySet.contains(shop)) {
@@ -237,15 +252,13 @@ public class CodeDistributorApp {
 
         for (String shop : nonPriorityShops) {
             int extra = leftover > 0 ? 1 : 0;
-            int finalAmount = Math.max(0, perOther + extra); // ensure no negative
+            int finalAmount = Math.max(0, perOther + extra);
             result.put(shop, finalAmount);
             if (leftover > 0) leftover--;
         }
 
         return result;
     }
-
-
 
     private File saveToCSV(List<String> allShopIds,
                            List<String> highPriorityShops,
@@ -259,19 +272,16 @@ public class CodeDistributorApp {
             if (!orderedShops.contains(id)) orderedShops.add(id);
         }
 
-        String userHome = System.getProperty("user.home");
-        File desktopDir = new File(userHome, "Desktop");
-        File output = new File(desktopDir, "Code_Distribution_Output.csv");
+        File output = new File(System.getProperty("user.home") + "/Desktop/Code_Distribution_Output.csv");
 
         try (PrintWriter pw = new PrintWriter(new FileWriter(output))) {
             pw.println("AKID;5FB;10FB;5RFB;10RFB");
-
             for (String id : orderedShops) {
-                String val5FB = getOrZero(codes5FB.get(id));
-                String val10FB = getOrZero(codes10FB.get(id));
-                String val5RFB = getOrZero(codes5RFB.get(id));
-                String val10RFB = getOrZero(codes10RFB.get(id));
-                pw.println(String.join(";", id, val5FB, val10FB, val5RFB, val10RFB));
+                pw.println(String.join(";", id,
+                        getOrZero(codes5FB.get(id)),
+                        getOrZero(codes10FB.get(id)),
+                        getOrZero(codes5RFB.get(id)),
+                        getOrZero(codes10RFB.get(id))));
             }
         }
 
