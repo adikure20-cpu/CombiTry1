@@ -6,7 +6,7 @@ RELEASE_VERSION="v1.0.15"                               # Your new version tag, 
 RELEASE_TITLE="Version $RELEASE_VERSION"
 RELEASE_BODY="Automated release $RELEASE_VERSION with new features and fixes."
 
-# Extract version number without 'v' for latest.txt (e.g., "1.0.15")
+# Extract version number without 'v' for latest.txt (e.g., "1.0.16")
 VERSION_NUMBER="${RELEASE_VERSION#v}"
 
 # Construct download URL for GitHub release asset

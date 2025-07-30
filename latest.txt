@@ -1,2 +1,2 @@
-1.0.14
+1.0.15
 https://github.com/adikure20-cpu/CombiTry1/releases/download/v1.0.15/CombiTry1.jar
