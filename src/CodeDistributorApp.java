@@ -7,7 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 
 public class CodeDistributorApp {
-    private static final String CURRENT_VERSION = "1.0.17";  // Make sure this is always updated
+    private static final String CURRENT_VERSION = "1.0.18";  // Make sure this is always updated
     private static final String VERSION_URL = "https://raw.githubusercontent.com/adikure20-cpu/CombiTry1/main/latest.txt";
 
     private JFrame frame;
