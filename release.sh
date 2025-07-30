@@ -2,7 +2,7 @@
 
 # Variables — EDIT THESE
 JAR_PATH="out/artifacts/CombiTry1_jar/CombiTry1.jar"
-RELEASE_VERSION="v1.0.5"        # Change to your new version (match your code & latest.txt)
+RELEASE_VERSION="v1.0.6"        # Change to your new version (match your code & latest.txt)
 RELEASE_TITLE="Version $RELEASE_VERSION"
 RELEASE_BODY="Automated release $RELEASE_VERSION with new features and fixes."
 
