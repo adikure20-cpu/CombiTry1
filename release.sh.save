@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Variables — EDIT THESE
+JAR_PATH="out/artifacts/CombiTry1_jar/CombiTry1.jar"
+RELEASE_VERSION="v1.0.7"        # Change to your new version (match your code & latest.txt)
+RELEASE_TITLE="Version $RELEASE_VERSION"
+RELEASE_BODY="Automated release $RELEASE_VERSION with new features and fixes."
+
+# Extract version number without 'v' for latest.txt (e.g., "1.0.6")
+VERSION_NUMBER="${1.0.7}"
+
+# Construct download URL (update "Version1" folder if needed)
+DOWNLOAD_URL="https://github.com/adikure20-cpu/CombiTry1/releases/download/$RELEASE_VERSION/CombiTry1.jar"
+
+echo "Updating latest.txt with version $VERSION_NUMBER and download URL $DOWNLOAD_URL"
+
+# Step 0: Update latest.txt file
+echo "$VERSION_NUMBER" > latest.txt
+echo "$DOWNLOAD_URL" >> latest.txt
+
+# Step 1: Add all changes and commit with message (including latest.txt)
+git add -A
+git commit -m "Release $RELEASE_VERSION"
+
+# Step 2: Push changes to remote main branch
+git push origin main
+
+# Step 3: Create new GitHub release (upload JAR)
+gh release create "$RELEASE_VERSION" "$JAR_PATH" -t "$RELEASE_TITLE" -n "$RELEASE_BODY"
+
+echo "Release $RELEASE_VERSION created, latest.txt updated, and JAR uploade
