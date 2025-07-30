@@ -2,7 +2,7 @@
 
 # Variables — EDIT THESE
 JAR_PATH="out/artifacts/CombiTry1_jar/CombiTry1.jar"   # Adjust if jar path differs
-RELEASE_VERSION="v1.0.18"                               # Your new version tag, e.g. v1.0.11
+RELEASE_VERSION="v1.0.19"                               # Your new version tag, e.g. v1.0.11
 RELEASE_TITLE="Version $RELEASE_VERSION"
 RELEASE_BODY="Automated release $RELEASE_VERSION with new features and fixes."
 
