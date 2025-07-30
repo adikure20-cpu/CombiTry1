@@ -11,20 +11,17 @@ public class CodeDistributorApp {
     private JFrame frame;
     private File selectedCSV;
 
-    // Your app's current version
-    private static final String currentVersion = "1.0.11";
-    // URL to your raw latest.txt on GitHub (make sure this is raw URL!)
+    private static final String currentVersion = "1.0.12";
     private static final String LATEST_URL = "https://raw.githubusercontent.com/adikure20-cpu/CombiTry1/main/latest.txt";
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            JFrame tempFrame = new JFrame(); // For update popup dialog parent
-            checkForUpdate(tempFrame);        // Check for updates before UI launch
+            JFrame tempFrame = new JFrame();
+            checkForUpdate(tempFrame);
             new CodeDistributorApp().createUI();
         });
     }
 
-    // Version comparison helper: returns >0 if v1 > v2, 0 if equal, <0 if v1 < v2
     public static int compareVersions(String v1, String v2) {
         String[] parts1 = v1.trim().split("\\.");
         String[] parts2 = v2.trim().split("\\.");
@@ -38,7 +35,6 @@ public class CodeDistributorApp {
         return 0;
     }
 
-    // Check for update by reading version and download URL from latest.txt on GitHub
     public static void checkForUpdate(Component parent) {
         try {
             java.net.URL url = new java.net.URL(LATEST_URL);
@@ -46,11 +42,6 @@ public class CodeDistributorApp {
             String latestVersion = in.readLine();
             String downloadUrl = in.readLine();
             in.close();
-
-            // Debug output (useful to see if whitespace or version mismatch)
-            System.out.println("DEBUG: currentVersion='" + currentVersion + "'");
-            System.out.println("DEBUG: latestVersion='" + latestVersion + "'");
-            System.out.println("DEBUG: downloadUrl='" + downloadUrl + "'");
 
             if (latestVersion != null && downloadUrl != null
                     && compareVersions(latestVersion, currentVersion) > 0) {
@@ -65,18 +56,14 @@ public class CodeDistributorApp {
                 }
             }
         } catch (Exception e) {
-            // Fail silently or log error for offline or connection issues
             System.out.println("DEBUG: Exception in update check: " + e);
         }
     }
 
     private void createUI() {
         frame = new JFrame("Code Distributor");
-
-        // Removed icon setting code
-
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(600, 450);
+        frame.setSize(600, 500);
         frame.setLayout(new GridLayout(0, 2, 10, 10));
 
         JButton uploadButton = new JButton("Upload CSV");
@@ -87,8 +74,9 @@ public class CodeDistributorApp {
         JTextField total5RFBField = new JTextField();
         JTextField total10RFBField = new JTextField();
 
-        JTextField highACShopsField = new JTextField();  // new field
-        JTextField priorityAmountField = new JTextField();
+        JTextField priority200Field = new JTextField();
+        JTextField priority100Field = new JTextField();
+        JTextField priority50Field = new JTextField();
 
         JButton createButton = new JButton("Create CSV");
 
@@ -112,18 +100,23 @@ public class CodeDistributorApp {
                 int total10 = Integer.parseInt(total10Field.getText().trim());
                 int total5RFB = Integer.parseInt(total5RFBField.getText().trim());
                 int total10RFB = Integer.parseInt(total10RFBField.getText().trim());
-                int priorityAmount = Integer.parseInt(priorityAmountField.getText().trim());
 
                 List<String> shopIds = loadShopIds(selectedCSV);
-                List<String> highACShops = parseHighACShops(highACShopsField.getText(), shopIds);
+                List<String> prio200 = parsePriorityShops(priority200Field.getText(), shopIds);
+                List<String> prio100 = parsePriorityShops(priority100Field.getText(), shopIds);
+                List<String> prio50 = parsePriorityShops(priority50Field.getText(), shopIds);
 
-                Map<String, Integer> codes5FB = distributeCodes(shopIds, highACShops, total5, priorityAmount);
-                Map<String, Integer> codes10FB = distributeCodes(shopIds, highACShops, total10, priorityAmount);
-                Map<String, Integer> codes5RFB = distributeCodes(shopIds, highACShops, total5RFB, priorityAmount);
-                Map<String, Integer> codes10RFB = distributeCodes(shopIds, highACShops, total10RFB, priorityAmount);
+                Map<String, Integer> codes5FB = distributeCodes(shopIds, prio200, prio100, prio50, total5);
+                Map<String, Integer> codes10FB = distributeCodes(shopIds, prio200, prio100, prio50, total10);
+                Map<String, Integer> codes5RFB = distributeCodes(shopIds, prio200, prio100, prio50, total5RFB);
+                Map<String, Integer> codes10RFB = distributeCodes(shopIds, prio200, prio100, prio50, total10RFB);
 
-                File createdFile = saveToCSV(shopIds, highACShops, codes5FB, codes10FB, codes5RFB, codes10RFB);
+                List<String> allPriorityShops = new ArrayList<>();
+                allPriorityShops.addAll(prio200);
+                allPriorityShops.addAll(prio100);
+                allPriorityShops.addAll(prio50);
 
+                File createdFile = saveToCSV(shopIds, allPriorityShops, codes5FB, codes10FB, codes5RFB, codes10RFB);
                 JOptionPane.showMessageDialog(frame, "CSV file created successfully on your Desktop.");
 
                 if (Desktop.isDesktopSupported()) {
@@ -151,19 +144,20 @@ public class CodeDistributorApp {
         frame.add(new JLabel("Total €10 RFB Codes (10RFB):"));
         frame.add(total10RFBField);
 
-        frame.add(new JLabel("Shops High AC (IDs, comma separated):"));
-        frame.add(highACShopsField);
+        frame.add(new JLabel("Priority 200 (IDs, comma separated):"));
+        frame.add(priority200Field);
 
-        frame.add(new JLabel("Priority Amount per Shop:"));
-        frame.add(priorityAmountField);
+        frame.add(new JLabel("Priority 100 (IDs, comma separated):"));
+        frame.add(priority100Field);
+
+        frame.add(new JLabel("Priority 50 (IDs, comma separated):"));
+        frame.add(priority50Field);
 
         frame.add(new JLabel()); // spacer
         frame.add(createButton);
 
         frame.setVisible(true);
     }
-
-    // Rest of your methods unchanged, but here for completeness:
 
     private List<String> loadShopIds(File csvFile) throws IOException {
         Set<String> idSet = new LinkedHashSet<>();
@@ -182,7 +176,7 @@ public class CodeDistributorApp {
                 String cleaned = line.replaceAll("[^0-9]", "");
 
                 if (!cleaned.matches("\\d+")) {
-                    throw new IOException("Invalid Shop ID at line " + lineNumber + ": \"" + line + "\". Only numeric IDs allowed.\n\nExample:\nShop ID\n12345\n67890");
+                    throw new IOException("Invalid Shop ID at line " + lineNumber + ": \"" + line + "\". Only numeric IDs allowed.");
                 }
 
                 idSet.add(cleaned);
@@ -191,15 +185,16 @@ public class CodeDistributorApp {
         }
 
         if (idSet.isEmpty()) {
-            throw new IOException("CSV contains no valid Shop IDs.\n\nExample:\nShop ID\n12345\n67890");
+            throw new IOException("CSV contains no valid Shop IDs.");
         }
 
         return new ArrayList<>(idSet);
     }
 
-    private List<String> parseHighACShops(String input, List<String> allShopIds) {
+    private List<String> parsePriorityShops(String input, List<String> allShopIds) {
         Set<String> validIds = new LinkedHashSet<>();
-        for (String id : input.split(",")) {
+        String[] parts = input.split("[,;\\s]+");  // Split on comma, semicolon, whitespace, tabs, etc.
+        for (String id : parts) {
             String trimmed = id.trim();
             if (!trimmed.isEmpty() && allShopIds.contains(trimmed)) {
                 validIds.add(trimmed);
@@ -208,67 +203,57 @@ public class CodeDistributorApp {
         return new ArrayList<>(validIds);
     }
 
-    private Map<String, Integer> distributeCodes(List<String> allShops, List<String> highACShops, int total, int priorityAmount) {
+
+    private Map<String, Integer> distributeCodes(List<String> allShops,
+                                                 List<String> prio200, List<String> prio100, List<String> prio50,
+                                                 int total) {
         Map<String, Integer> result = new LinkedHashMap<>();
 
-        int highACCount = highACShops.size();
-        int fixedTotal = highACCount * priorityAmount;
+        Set<String> prioritySet = new LinkedHashSet<>();
+        prioritySet.addAll(prio200);
+        prioritySet.addAll(prio100);
+        prioritySet.addAll(prio50);
 
-        if (total < fixedTotal && highACCount > 0) {
-            int perPriority = total / highACCount;
-            int leftoverPriority = total % highACCount;
+        int fixedTotal = prio200.size() * 200 + prio100.size() * 100 + prio50.size() * 50;
 
-            for (int i = 0; i < highACCount; i++) {
-                int amount = perPriority + (leftoverPriority > 0 ? 1 : 0);
-                if (amount < 0) amount = 0;
-                result.put(highACShops.get(i), amount);
-                if (leftoverPriority > 0) leftoverPriority--;
+        // Assign fixed values to priority shops
+        for (String id : prio200) result.put(id, 200);
+        for (String id : prio100) result.put(id, 100);
+        for (String id : prio50) result.put(id, 50);
+
+        int remaining = total - fixedTotal;
+        if (remaining < 0) remaining = 0;
+
+        // Distribute remaining codes to non-priority shops
+        List<String> nonPriorityShops = new ArrayList<>();
+        for (String shop : allShops) {
+            if (!prioritySet.contains(shop)) {
+                nonPriorityShops.add(shop);
             }
+        }
 
-            Set<String> highACSet = new HashSet<>(highACShops);
-            for (String shop : allShops) {
-                if (!highACSet.contains(shop)) {
-                    result.put(shop, 0);
-                }
-            }
-        } else {
-            int remaining = total - fixedTotal;
+        int perOther = nonPriorityShops.size() > 0 ? remaining / nonPriorityShops.size() : 0;
+        int leftover = nonPriorityShops.size() > 0 ? remaining % nonPriorityShops.size() : 0;
 
-            Set<String> highACSet = new HashSet<>(highACShops);
-            List<String> others = new ArrayList<>();
-            for (String shop : allShops) {
-                if (!highACSet.contains(shop)) others.add(shop);
-            }
-
-            int perOther = (others.size() > 0) ? remaining / others.size() : 0;
-            int leftover = (others.size() > 0) ? remaining % others.size() : 0;
-
-            for (String id : highACShops) {
-                int assigned = priorityAmount;
-                if (assigned < 0) assigned = 0;
-                result.put(id, assigned);
-            }
-
-            for (int i = 0; i < others.size(); i++) {
-                String id = others.get(i);
-                int amount = perOther + (leftover > 0 ? 1 : 0);
-                if (amount < 0) amount = 0;
-                result.put(id, amount);
-                if (leftover > 0) leftover--;
-            }
+        for (String shop : nonPriorityShops) {
+            int extra = leftover > 0 ? 1 : 0;
+            int finalAmount = Math.max(0, perOther + extra); // ensure no negative
+            result.put(shop, finalAmount);
+            if (leftover > 0) leftover--;
         }
 
         return result;
     }
 
+
     private File saveToCSV(List<String> allShopIds,
-                           List<String> highACShops,
+                           List<String> highPriorityShops,
                            Map<String, Integer> codes5FB,
                            Map<String, Integer> codes10FB,
                            Map<String, Integer> codes5RFB,
                            Map<String, Integer> codes10RFB) throws IOException {
 
-        List<String> orderedShops = new ArrayList<>(highACShops);
+        List<String> orderedShops = new ArrayList<>(highPriorityShops);
         for (String id : allShopIds) {
             if (!orderedShops.contains(id)) orderedShops.add(id);
         }
@@ -285,10 +270,10 @@ public class CodeDistributorApp {
                 String val10FB = getOrZero(codes10FB.get(id));
                 String val5RFB = getOrZero(codes5RFB.get(id));
                 String val10RFB = getOrZero(codes10RFB.get(id));
-
                 pw.println(String.join(";", id, val5FB, val10FB, val5RFB, val10RFB));
             }
         }
+
         return output;
     }
 
