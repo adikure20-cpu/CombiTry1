@@ -5,25 +5,27 @@ import java.io.*;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.util.*;
 
 public class CodeDistributorApp {
-    private static final String CURRENT_VERSION = "1.0.16";
+    private static final String CURRENT_VERSION = "1.0.17";  // Make sure this is always updated
     private static final String VERSION_URL = "https://raw.githubusercontent.com/adikure20-cpu/CombiTry1/main/latest.txt";
-    private static final String DOWNLOAD_URL = "https://github.com/adikure20-cpu/CombiTry1/releases/download/v1.0.15/CombiTry1.jar";
 
     private JFrame frame;
     private File selectedCSV;
 
     public static void main(String[] args) {
-        if (checkForUpdate()) {
+        String[] updateInfo = checkForUpdate();
+        if (updateInfo != null) {
+            String latestVersion = updateInfo[0];
+            String downloadLink = updateInfo[1];
+
             int result = JOptionPane.showConfirmDialog(null,
-                    "A new version is available. Do you want to update now?",
+                    "A new version (" + latestVersion + ") is available. Do you want to update now?",
                     "Update Available",
                     JOptionPane.YES_NO_OPTION);
 
             if (result == JOptionPane.YES_OPTION) {
-                downloadAndUpdate();
+                downloadAndUpdate(downloadLink);
                 return;
             }
         }
@@ -31,17 +33,17 @@ public class CodeDistributorApp {
         SwingUtilities.invokeLater(() -> new CodeDistributorApp().createUI());
     }
 
-    private static boolean checkForUpdate() {
-        try {
-            URL url = new URL(VERSION_URL);
-            BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
+    private static String[] checkForUpdate() {
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(new URL(VERSION_URL).openStream()))) {
             String latestVersion = in.readLine().trim();
-            in.close();
-            return isNewVersionAvailable(CURRENT_VERSION, latestVersion);
+            String downloadUrl = in.readLine().trim();
+            if (isNewVersionAvailable(CURRENT_VERSION, latestVersion)) {
+                return new String[]{latestVersion, downloadUrl};
+            }
         } catch (IOException e) {
             System.err.println("Failed to check for update: " + e.getMessage());
-            return false;
         }
+        return null;
     }
 
     private static boolean isNewVersionAvailable(String current, String latest) {
@@ -52,29 +54,24 @@ public class CodeDistributorApp {
         for (int i = 0; i < length; i++) {
             int currentNum = i < currentParts.length ? Integer.parseInt(currentParts[i]) : 0;
             int latestNum = i < latestParts.length ? Integer.parseInt(latestParts[i]) : 0;
-
-            if (latestNum > currentNum) {
-                return true;
-            } else if (latestNum < currentNum) {
-                return false;
-            }
+            if (latestNum > currentNum) return true;
+            if (latestNum < currentNum) return false;
         }
-        return false; // versions are equal
+        return false;
     }
 
-    private static void downloadAndUpdate() {
+    private static void downloadAndUpdate(String downloadUrl) {
         try {
-            URL downloadUrl = new URL(DOWNLOAD_URL);
+            URL url = new URL(downloadUrl);
             File tempJar = File.createTempFile("update", ".jar");
             tempJar.deleteOnExit();
 
-            try (InputStream in = downloadUrl.openStream()) {
+            try (InputStream in = url.openStream()) {
                 Files.copy(in, tempJar.toPath(), StandardCopyOption.REPLACE_EXISTING);
             }
 
             Runtime.getRuntime().exec("java -jar " + tempJar.getAbsolutePath());
             System.exit(0);
-
         } catch (IOException e) {
             JOptionPane.showMessageDialog(null,
                     "Failed to download the update: " + e.getMessage(),
@@ -104,7 +101,6 @@ public class CodeDistributorApp {
 
         frame.add(uploadButton);
         frame.add(fileLabel);
-
         frame.setVisible(true);
     }
 }
