@@ -2,7 +2,7 @@
 
 # Variables — EDIT THESE
 JAR_PATH="out/artifacts/CombiTry1_jar/CombiTry1.jar"   # Adjust if jar path differs
-RELEASE_VERSION="v1.0.16"                               # Your new version tag, e.g. v1.0.11
+RELEASE_VERSION="v1.0.17"                               # Your new version tag, e.g. v1.0.11
 RELEASE_TITLE="Version $RELEASE_VERSION"
 RELEASE_BODY="Automated release $RELEASE_VERSION with new features and fixes."
 
@@ -36,6 +36,11 @@ echo "Pushing changes to origin main branch..."
 git push origin main
 
 echo "Creating GitHub release $RELEASE_VERSION and uploading jar..."
+
+if gh release view "$RELEASE_VERSION" &>/dev/null; then
+    echo "❌ A release with tag $RELEASE_VERSION already exists. Please bump the version."
+    exit 1
+fi
 
 gh release create "$RELEASE_VERSION" "$JAR_PATH" -t "$RELEASE_TITLE" -n "$RELEASE_BODY"
 
