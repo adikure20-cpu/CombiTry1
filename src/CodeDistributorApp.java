@@ -1,106 +1,19 @@
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import java.awt.*;
+
+import java.awt.Desktop;
+import java.awt.GridLayout;
+
 import java.io.*;
-import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.*;
-import java.util.List;
 
 public class CodeDistributorApp {
 
     private JFrame frame;
     private File selectedCSV;
 
-    private static final String currentVersion = "1.0.19";
-    private static final String LATEST_URL = "https://raw.githubusercontent.com/adikure20-cpu/CombiTry1/main/latest.txt";
-
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            JFrame tempFrame = new JFrame();
-            checkForUpdate(tempFrame);
-            new CodeDistributorApp().createUI();
-        });
-    }
-
-    public static int compareVersions(String v1, String v2) {
-        String[] parts1 = v1.trim().split("\\.");
-        String[] parts2 = v2.trim().split("\\.");
-        int length = Math.max(parts1.length, parts2.length);
-        for (int i = 0; i < length; i++) {
-            int p1 = i < parts1.length ? Integer.parseInt(parts1[i]) : 0;
-            int p2 = i < parts2.length ? Integer.parseInt(parts2[i]) : 0;
-            if (p1 < p2) return -1;
-            if (p1 > p2) return 1;
-        }
-        return 0;
-    }
-
-    public static void checkForUpdate(Component parent) {
-        try {
-            java.net.URL url = new java.net.URL(LATEST_URL);
-            BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
-            String latestVersion = in.readLine();
-            String downloadUrl = in.readLine();
-            in.close();
-
-            if (latestVersion != null && downloadUrl != null
-                    && compareVersions(latestVersion, currentVersion) > 0) {
-                int option = JOptionPane.showConfirmDialog(parent,
-                        "A new version (" + latestVersion + ") is available!\nDo you want to update now?",
-                        "Update Available",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.INFORMATION_MESSAGE
-                );
-
-                if (option == JOptionPane.YES_OPTION) {
-                    JOptionPane.showMessageDialog(parent,
-                            "Updating now... Please wait.",
-                            "Updating",
-                            JOptionPane.INFORMATION_MESSAGE);
-                    downloadAndLaunchUpdate(downloadUrl);
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("DEBUG: Exception in update check: " + e.getMessage());
-        }
-    }
-
-    private static void downloadAndLaunchUpdate(String downloadUrl) {
-        try {
-            File tempJar = File.createTempFile("CombiTry1_update", ".jar");
-            tempJar.deleteOnExit();
-
-            try (BufferedInputStream in = new BufferedInputStream(new java.net.URL(downloadUrl).openStream());
-                 FileOutputStream fileOutputStream = new FileOutputStream(tempJar)) {
-                byte[] dataBuffer = new byte[1024];
-                int bytesRead;
-                while ((bytesRead = in.read(dataBuffer, 0, 1024)) != -1) {
-                    fileOutputStream.write(dataBuffer, 0, bytesRead);
-                }
-            }
-
-            // Get current JAR path
-            String pathToThisJar = new File(CodeDistributorApp.class.getProtectionDomain()
-                    .getCodeSource().getLocation().toURI()).getPath();
-            File currentJar = new File(pathToThisJar);
-
-            // Replace the current JAR with the new one
-            Files.copy(tempJar.toPath(), currentJar.toPath(), StandardCopyOption.REPLACE_EXISTING);
-
-            // Relaunch the updated JAR
-            new ProcessBuilder("java", "-jar", currentJar.getAbsolutePath()).start();
-
-            // Exit the old app
-            System.exit(0);
-
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(null,
-                    "Failed to update: " + e.getMessage(),
-                    "Update Error",
-                    JOptionPane.ERROR_MESSAGE);
-        }
+        SwingUtilities.invokeLater(() -> new CodeDistributorApp().createUI());
     }
 
     private void createUI() {
@@ -149,10 +62,18 @@ public class CodeDistributorApp {
                 List<String> prio100 = parsePriorityShops(priority100Field.getText(), shopIds);
                 List<String> prio50 = parsePriorityShops(priority50Field.getText(), shopIds);
 
+                validateCodeBudget(total5, prio200.size(), prio100.size(), prio50.size());
+                validateCodeBudget(total10, prio200.size(), prio100.size(), prio50.size());
+
                 Map<String, Integer> codes5FB = distributeCodes(shopIds, prio200, prio100, prio50, total5);
                 Map<String, Integer> codes10FB = distributeCodes(shopIds, prio200, prio100, prio50, total10);
-                Map<String, Integer> codes5RFB = distributeCodes(shopIds, prio200, prio100, prio50, total5RFB);
-                Map<String, Integer> codes10RFB = distributeCodes(shopIds, prio200, prio100, prio50, total10RFB);
+                Map<String, Integer> codes5RFB = (total5RFB > 0)
+                        ? distributeCodes(shopIds, prio200, prio100, prio50, total5RFB)
+                        : emptyMap(shopIds);
+
+                Map<String, Integer> codes10RFB = (total10RFB > 0)
+                        ? distributeCodes(shopIds, prio200, prio100, prio50, total10RFB)
+                        : emptyMap(shopIds);
 
                 List<String> allPriorityShops = new ArrayList<>();
                 allPriorityShops.addAll(prio200);
@@ -165,9 +86,7 @@ public class CodeDistributorApp {
                 if (Desktop.isDesktopSupported()) {
                     Desktop.getDesktop().open(createdFile);
                 }
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(frame, "Please enter valid numbers.");
-            } catch (IOException ex) {
+            } catch (Exception ex) {
                 JOptionPane.showMessageDialog(frame, "Error: " + ex.getMessage());
             }
         });
@@ -188,42 +107,35 @@ public class CodeDistributorApp {
     private List<String> loadShopIds(File csvFile) throws IOException {
         Set<String> idSet = new LinkedHashSet<>();
         try (BufferedReader br = new BufferedReader(new FileReader(csvFile))) {
-            String header = br.readLine();
-            if (header == null || !header.replaceAll("[^a-zA-Z0-9]", "").equalsIgnoreCase("ShopID")) {
-                throw new IOException("Invalid CSV format. First line must be: Shop ID");
-            }
-
             String line;
             while ((line = br.readLine()) != null) {
-                line = line.trim();
-                if (line.isEmpty()) continue;
-                String cleaned = line.replaceAll("[^0-9]", "");
-                if (cleaned.matches("\\d+")) {
-                    idSet.add(cleaned);
-                }
+                String cleaned = line.split("[;,\t]")[0].replaceAll("[^0-9]", "").trim();
+                if (!cleaned.isEmpty()) idSet.add(cleaned);
             }
-        }
-        if (idSet.isEmpty()) {
-            throw new IOException("CSV contains no valid Shop IDs.");
         }
         return new ArrayList<>(idSet);
     }
 
     private List<String> parsePriorityShops(String input, List<String> allShopIds) {
         Set<String> validIds = new LinkedHashSet<>();
-        String[] parts = input.split("[,;\\s]+");
+        String[] parts = input.split("[\\s,;]+");
         for (String id : parts) {
-            String trimmed = id.trim();
-            if (!trimmed.isEmpty() && allShopIds.contains(trimmed)) {
-                validIds.add(trimmed);
+            String cleaned = id.trim().replaceAll("[^0-9]", "");
+            if (!cleaned.isEmpty() && allShopIds.contains(cleaned)) {
+                validIds.add(cleaned);
             }
         }
         return new ArrayList<>(validIds);
     }
 
-    private Map<String, Integer> distributeCodes(List<String> allShops,
-                                                 List<String> prio200, List<String> prio100, List<String> prio50,
-                                                 int total) {
+    private void validateCodeBudget(int total, int count200, int count100, int count50) {
+        int fixed = count200 * 200 + count100 * 100 + count50 * 50;
+        if (fixed > total) {
+            throw new IllegalArgumentException("Not enough codes available. Fixed priority total (" + fixed + ") exceeds budget (" + total + ").");
+        }
+    }
+
+    private Map<String, Integer> distributeCodes(List<String> allShops, List<String> prio200, List<String> prio100, List<String> prio50, int total) {
         Map<String, Integer> result = new LinkedHashMap<>();
 
         Set<String> prioritySet = new LinkedHashSet<>();
@@ -260,12 +172,17 @@ public class CodeDistributorApp {
         return result;
     }
 
-    private File saveToCSV(List<String> allShopIds,
-                           List<String> highPriorityShops,
-                           Map<String, Integer> codes5FB,
-                           Map<String, Integer> codes10FB,
-                           Map<String, Integer> codes5RFB,
-                           Map<String, Integer> codes10RFB) throws IOException {
+    private Map<String, Integer> emptyMap(List<String> ids) {
+        Map<String, Integer> map = new LinkedHashMap<>();
+        for (String id : ids) {
+            map.put(id, 0);
+        }
+        return map;
+    }
+
+    private File saveToCSV(List<String> allShopIds, List<String> highPriorityShops,
+                           Map<String, Integer> codes5FB, Map<String, Integer> codes10FB,
+                           Map<String, Integer> codes5RFB, Map<String, Integer> codes10RFB) {
 
         List<String> orderedShops = new ArrayList<>(highPriorityShops);
         for (String id : allShopIds) {
@@ -277,18 +194,17 @@ public class CodeDistributorApp {
         try (PrintWriter pw = new PrintWriter(new FileWriter(output))) {
             pw.println("AKID;5FB;10FB;5RFB;10RFB");
             for (String id : orderedShops) {
-                pw.println(String.join(";", id,
-                        getOrZero(codes5FB.get(id)),
-                        getOrZero(codes10FB.get(id)),
-                        getOrZero(codes5RFB.get(id)),
-                        getOrZero(codes10RFB.get(id))));
+                pw.println(String.join(";",
+                        id,
+                        String.valueOf(codes5FB.getOrDefault(id, 0)),
+                        String.valueOf(codes10FB.getOrDefault(id, 0)),
+                        String.valueOf(codes5RFB.getOrDefault(id, 0)),
+                        String.valueOf(codes10RFB.getOrDefault(id, 0))));
             }
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to write CSV file", e);
         }
 
         return output;
-    }
-
-    private String getOrZero(Integer val) {
-        return (val == null) ? "0" : val.toString();
     }
 }
