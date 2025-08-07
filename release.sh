@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e  # Exit immediately if a command exits with a non-zero status
 
 # --- USAGE CHECK ---
 if [ -z "$1" ]; then
@@ -16,6 +17,17 @@ RELEASE_TITLE="Version $RELEASE_VERSION"
 RELEASE_BODY="Automated release $RELEASE_VERSION with updated UI and logic."
 DOWNLOAD_URL="https://github.com/$REPO/releases/download/$RELEASE_VERSION/CombiTry1.jar"
 
+# --- CHECK GH CLI ---
+if ! command -v gh &> /dev/null; then
+  echo "❌ GitHub CLI (gh) not installed. Please install it: https://cli.github.com/"
+  exit 1
+fi
+
+if ! gh auth status &> /dev/null; then
+  echo "❌ GitHub CLI not authenticated. Run: gh auth login"
+  exit 1
+fi
+
 # --- CHECK IF JAR EXISTS ---
 echo "🔍 Checking for JAR at: $JAR_PATH"
 if [ ! -f "$JAR_PATH" ]; then
@@ -27,6 +39,23 @@ fi
 echo "📝 Updating $LATEST_TXT..."
 echo "$VERSION_NUMBER" > $LATEST_TXT
 echo "$DOWNLOAD_URL" >> $LATEST_TXT
+
+# --- SHOW SUMMARY ---
+echo
+echo "📦 Preparing to release:"
+echo "   Version:         $RELEASE_VERSION"
+echo "   JAR Path:        $JAR_PATH"
+echo "   GitHub Repo:     $REPO"
+echo "   Release Title:   $RELEASE_TITLE"
+echo "   Download URL:    $DOWNLOAD_URL"
+echo
+
+# --- USER CONFIRMATION ---
+read -p "⚠️  Proceed with commit, push, and release? (y/N): " confirm
+if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
+  echo "❌ Release aborted by user."
+  exit 1
+fi
 
 # --- GIT COMMIT & PUSH ---
 echo "📤 Committing and pushing changes to GitHub..."
