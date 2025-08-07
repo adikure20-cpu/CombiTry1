@@ -19,6 +19,8 @@ DOWNLOAD_URL="https://github.com/$REPO/releases/download/$RELEASE_VERSION/CombiT
 UPDATER_FILE="src/Updater.java"
 VERSION_FILE="version.txt"
 BUILD_DIR="build_release"
+APP_NAME="CombiTry1"
+MAIN_CLASS="com.adikuric.Main"
 
 # --- TOOLS CHECK ---
 if ! command -v gh &> /dev/null; then
@@ -53,8 +55,8 @@ fi
 
 # --- UPDATE latest.txt ---
 echo "📝 Writing $LATEST_TXT..."
-echo "$VERSION_NUMBER" > $LATEST_TXT
-echo "$DOWNLOAD_URL" >> $LATEST_TXT
+echo "$VERSION_NUMBER" > "$LATEST_TXT"
+echo "$DOWNLOAD_URL" >> "$LATEST_TXT"
 
 # --- USER CONFIRMATION ---
 echo
@@ -77,36 +79,41 @@ git add .
 git commit -m "Release $RELEASE_VERSION"
 git push origin main
 
-# --- OPTIONAL: Build DMG ---
-echo "💿 Building DMG using jpackage..."
-DMG_OUTPUT_DIR="$BUILD_DIR/output"
-INPUT_DIR="$BUILD_DIR/input"
-MAIN_CLASS="com.adikuric.Main"
-APP_NAME="CombiTry1"
-mkdir -p "$INPUT_DIR"
-cp "$JAR_PATH" "$INPUT_DIR/$APP_NAME.jar"
+# --- ASK TO BUILD DMG ---
+read -p "💿 Do you want to build a DMG as well? (y/N): " build_dmg
+if [[ "$build_dmg" =~ ^[Yy]$ ]]; then
+  echo "💿 Building DMG using jpackage..."
 
-jpackage \
-  --input "$INPUT_DIR" \
-  --main-jar "$APP_NAME.jar" \
-  --main-class "$MAIN_CLASS" \
-  --type dmg \
-  --name "$APP_NAME" \
-  --dest "$DMG_OUTPUT_DIR" \
-  --java-options "-Xmx512m"
+  DMG_OUTPUT_DIR="$BUILD_DIR/output"
+  INPUT_DIR="$BUILD_DIR/input"
+  mkdir -p "$INPUT_DIR" "$DMG_OUTPUT_DIR"
 
-# --- FIND GENERATED DMG ---
-echo "🔍 Searching for .dmg..."
-DMG_PATH=$(find "$DMG_OUTPUT_DIR" -name "*.dmg" | head -n 1)
-if [ ! -f "$DMG_PATH" ]; then
-  echo "❌ DMG not found in $DMG_OUTPUT_DIR"
-  exit 1
+  cp "$JAR_PATH" "$INPUT_DIR/$APP_NAME.jar"
+
+  jpackage \
+    --input "$INPUT_DIR" \
+    --main-jar "$APP_NAME.jar" \
+    --main-class "$MAIN_CLASS" \
+    --type dmg \
+    --name "$APP_NAME" \
+    --dest "$DMG_OUTPUT_DIR" \
+    --java-options "-Xmx512m"
+
+  # --- FIND GENERATED DMG ---
+  echo "🔍 Searching for .dmg..."
+  DMG_PATH=$(find "$DMG_OUTPUT_DIR" -name "*.dmg" | head -n 1)
+  if [ ! -f "$DMG_PATH" ]; then
+    echo "❌ DMG not found in $DMG_OUTPUT_DIR"
+    exit 1
+  fi
+
+  echo "💿 Found DMG: $DMG_PATH"
+
+  echo "🚀 Uploading to GitHub Releases..."
+  gh release create "$RELEASE_VERSION" "$JAR_PATH" "$DMG_PATH" --title "$RELEASE_TITLE" --notes "$RELEASE_BODY"
+else
+  echo "🚀 Uploading only JAR to GitHub Releases..."
+  gh release create "$RELEASE_VERSION" "$JAR_PATH" --title "$RELEASE_TITLE" --notes "$RELEASE_BODY"
 fi
-
-echo "💿 Found DMG: $DMG_PATH"
-
-# --- CREATE RELEASE ---
-echo "🚀 Uploading to GitHub Releases..."
-gh release create "$RELEASE_VERSION" "$JAR_PATH" "$DMG_PATH" --title "$RELEASE_TITLE" --notes "$RELEASE_BODY"
 
 echo "✅ Done! Version $VERSION_NUMBER released and uploaded."
