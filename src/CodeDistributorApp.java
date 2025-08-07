@@ -4,6 +4,9 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.io.*;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.List;
 
@@ -13,6 +16,7 @@ public class CodeDistributorApp {
     private File selectedCSV;
 
     public static void main(String[] args) {
+        Updater.checkForUpdates(); // 👈 check for updates on startup
         SwingUtilities.invokeLater(() -> new CodeDistributorApp().createUI());
     }
 
@@ -22,7 +26,6 @@ public class CodeDistributorApp {
         frame.setSize(700, 600);
 
         JTabbedPane tabbedPane = new JTabbedPane();
-
         tabbedPane.addTab("Standard Distribution", createStandardPanel());
         tabbedPane.addTab("Single Per Shop", createSinglePerShopPanel());
 
