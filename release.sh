@@ -1,9 +1,9 @@
 #!/bin/bash
-set -e  # Exit immediately if a command exits with a non-zero status
+set -e  # Exit on error
 
 # --- USAGE CHECK ---
 if [ -z "$1" ]; then
-  echo "❌ Usage: ./release.sh <version>   e.g., ./release.sh 1.0.20"
+  echo "❌ Usage: ./release.sh <new_version>   e.g., ./release.sh 1.0.24"
   exit 1
 fi
 
@@ -16,10 +16,12 @@ REPO="adikure20-cpu/CombiTry1"
 RELEASE_TITLE="Version $RELEASE_VERSION"
 RELEASE_BODY="Automated release $RELEASE_VERSION with updated UI and logic."
 DOWNLOAD_URL="https://github.com/$REPO/releases/download/$RELEASE_VERSION/CombiTry1.jar"
+UPDATER_FILE="src/Updater.java"
+VERSION_FILE="version.txt"
 
-# --- CHECK GH CLI ---
+# --- TOOLS CHECK ---
 if ! command -v gh &> /dev/null; then
-  echo "❌ GitHub CLI (gh) not installed. Please install it: https://cli.github.com/"
+  echo "❌ GitHub CLI (gh) not installed. https://cli.github.com/"
   exit 1
 fi
 
@@ -28,24 +30,36 @@ if ! gh auth status &> /dev/null; then
   exit 1
 fi
 
-# --- CHECK IF JAR EXISTS ---
+# --- UPDATE version.txt ---
+echo "$VERSION_NUMBER" > "$VERSION_FILE"
+
+# --- UPDATE CURRENT_VERSION in Updater.java ---
+if grep -q 'CURRENT_VERSION' "$UPDATER_FILE"; then
+  echo "🔧 Updating CURRENT_VERSION in $UPDATER_FILE..."
+  sed -i.bak "s/private static final String CURRENT_VERSION = \".*\";/private static final String CURRENT_VERSION = \"$VERSION_NUMBER\";/" "$UPDATER_FILE"
+  rm "$UPDATER_FILE.bak"
+else
+  echo "❌ Couldn't find CURRENT_VERSION in $UPDATER_FILE"
+  exit 1
+fi
+
+# --- BUILD CHECK ---
 echo "🔍 Checking for JAR at: $JAR_PATH"
 if [ ! -f "$JAR_PATH" ]; then
-  echo "❌ JAR file not found. Please build the JAR first."
+  echo "❌ JAR not found. Please build the JAR first."
   exit 1
 fi
 
 # --- UPDATE latest.txt ---
-echo "📝 Updating $LATEST_TXT..."
+echo "📝 Writing $LATEST_TXT..."
 echo "$VERSION_NUMBER" > $LATEST_TXT
 echo "$DOWNLOAD_URL" >> $LATEST_TXT
 
-# --- SHOW SUMMARY ---
+# --- SUMMARY ---
 echo
-echo "📦 Preparing to release:"
-echo "   Version:         $RELEASE_VERSION"
+echo "📦 Ready to release:"
+echo "   Version:         $VERSION_NUMBER"
 echo "   JAR Path:        $JAR_PATH"
-echo "   GitHub Repo:     $REPO"
 echo "   Release Title:   $RELEASE_TITLE"
 echo "   Download URL:    $DOWNLOAD_URL"
 echo
@@ -53,18 +67,18 @@ echo
 # --- USER CONFIRMATION ---
 read -p "⚠️  Proceed with commit, push, and release? (y/N): " confirm
 if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
-  echo "❌ Release aborted by user."
+  echo "❌ Release cancelled."
   exit 1
 fi
 
-# --- GIT COMMIT & PUSH ---
-echo "📤 Committing and pushing changes to GitHub..."
+# --- COMMIT & PUSH ---
+echo "📤 Committing changes..."
 git add .
 git commit -m "Release $RELEASE_VERSION"
 git push origin main
 
-# --- CREATE GITHUB RELEASE ---
-echo "🚀 Creating GitHub release $RELEASE_VERSION..."
+# --- CREATE RELEASE ---
+echo "🚀 Uploading to GitHub..."
 gh release create "$RELEASE_VERSION" "$JAR_PATH" --title "$RELEASE_TITLE" --notes "$RELEASE_BODY"
 
-echo "✅ Done! Version $RELEASE_VERSION released and uploaded."
+echo "✅ Done! Version $VERSION_NUMBER released and uploaded."
