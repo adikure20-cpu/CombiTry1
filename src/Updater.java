@@ -9,22 +9,28 @@ import java.nio.file.StandardCopyOption;
 public class Updater {
 
     private static final String LATEST_INFO_URL = "https://raw.githubusercontent.com/adikure20-cpu/CombiTry1/main/latest.txt";
-    private static final String CURRENT_VERSION = "1.0.27"; // Change per release
+    private static final String CURRENT_VERSION = "1.0.28"; // Update this manually per release
+    private static final String VERSION_CACHE_FILE = System.getProperty("user.home") + "/.combitry1_version.txt";
 
     public static void checkForUpdates() {
         try {
-            // Fetch latest.txt
+            // Fetch latest.txt from GitHub
             URL url = new URL(LATEST_INFO_URL);
             BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()));
             String latestVersion = reader.readLine().trim();
             String jarDownloadUrl = reader.readLine().trim();
             reader.close();
 
-            if (CURRENT_VERSION.equals(latestVersion)) {
+            // Read cached version
+            String cachedVersion = readCachedVersion();
+
+            // Skip if latest already downloaded and launched
+            if (CURRENT_VERSION.equals(latestVersion) || latestVersion.equals(cachedVersion)) {
                 System.out.println("✅ Already on latest version.");
                 return;
             }
 
+            // Ask user
             int confirm = JOptionPane.showConfirmDialog(null,
                     "New version " + latestVersion + " available.\nDownload and restart now?",
                     "Update Available", JOptionPane.YES_NO_OPTION);
@@ -33,7 +39,7 @@ public class Updater {
 
             File targetFile = new File(System.getProperty("user.home") + "/Downloads/CombiTry1.jar");
 
-            // Show download progress UI
+            // Download with progress UI
             JDialog progressDialog = new JDialog((JFrame) null, "Downloading Update", true);
             JProgressBar progressBar = new JProgressBar(0, 100);
             progressBar.setStringPainted(true);
@@ -49,6 +55,7 @@ public class Updater {
 
                     try (InputStream in = connection.getInputStream();
                          FileOutputStream out = new FileOutputStream(targetFile)) {
+
                         byte[] buffer = new byte[4096];
                         int bytesRead;
                         int totalRead = 0;
@@ -66,13 +73,13 @@ public class Updater {
 
                 @Override
                 protected void process(java.util.List<Integer> chunks) {
-                    int latestProgress = chunks.get(chunks.size() - 1);
-                    progressBar.setValue(latestProgress);
+                    progressBar.setValue(chunks.get(chunks.size() - 1));
                 }
 
                 @Override
                 protected void done() {
                     progressDialog.dispose();
+                    saveCachedVersion(latestVersion);
                     launchNewJar(targetFile);
                 }
             };
@@ -93,6 +100,24 @@ public class Updater {
         } catch (IOException ex) {
             ex.printStackTrace();
             JOptionPane.showMessageDialog(null, "❌ Failed to launch new version: " + ex.getMessage());
+        }
+    }
+
+    private static String readCachedVersion() {
+        try {
+            File file = new File(VERSION_CACHE_FILE);
+            if (file.exists()) {
+                return new String(Files.readAllBytes(file.toPath())).trim();
+            }
+        } catch (IOException ignored) {}
+        return "";
+    }
+
+    private static void saveCachedVersion(String version) {
+        try {
+            Files.write(new File(VERSION_CACHE_FILE).toPath(), version.getBytes());
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 }
