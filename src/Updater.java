@@ -9,7 +9,7 @@ import java.nio.file.StandardCopyOption;
 public class Updater {
 
     private static final String LATEST_INFO_URL = "https://raw.githubusercontent.com/adikure20-cpu/CombiTry1/main/latest.txt";
-    private static final String CURRENT_VERSION = "1.0.21"; // Change per release
+    private static final String CURRENT_VERSION = "1.0.25"; // Change per release
 
     public static void checkForUpdates() {
         try {
