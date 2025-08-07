@@ -6,6 +6,8 @@
         <element id="file-copy" path="$PROJECT_DIR$/src/resources/META-INF/MANIFEST.MF" />
       </element>
       <element id="module-output" name="CombiTry1" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/formdev/flatlaf-intellij-themes/3.5/flatlaf-intellij-themes-3.5.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$MAVEN_REPOSITORY$/com/formdev/flatlaf/3.5/flatlaf-3.5.jar" path-in-jar="/" />
     </root>
   </artifact>
 </component>
