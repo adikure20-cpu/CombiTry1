@@ -11,25 +11,18 @@ fi
 VERSION_NUMBER="$1"
 RELEASE_VERSION="v$VERSION_NUMBER"
 JAR_PATH="out/artifacts/CombiTry1_jar/CombiTry1.jar"
+DMG_NAME="CombiTry1.dmg"
+BUILD_DIR="build_release"
+DMG_PATH="$BUILD_DIR/output/$DMG_NAME"
+
 LATEST_TXT="latest.txt"
 REPO="adikure20-cpu/CombiTry1"
 RELEASE_TITLE="Version $RELEASE_VERSION"
 RELEASE_BODY="Automated release $RELEASE_VERSION with updated UI and logic."
 DOWNLOAD_URL="https://github.com/$REPO/releases/download/$RELEASE_VERSION/CombiTry1.jar"
+
 UPDATER_FILE="src/Updater.java"
 VERSION_FILE="version.txt"
-DMG_NAME="CombiTry1.dmg"
-
-# Build output
-BUILD_DIR="build_release"
-INPUT_DIR="$BUILD_DIR/input"
-OUTPUT_DIR="$BUILD_DIR/output"
-DMG_PATH="$OUTPUT_DIR/$DMG_NAME"
-
-# Icon (optional)
-ICON_PATH="$HOME/jar2app/icon.icns"
-ICON_OPTION=""
-[ -f "$ICON_PATH" ] && ICON_OPTION="--icon $ICON_PATH"
 
 # --- TOOLS CHECK ---
 if ! command -v gh &> /dev/null; then
@@ -39,11 +32,6 @@ fi
 
 if ! gh auth status &> /dev/null; then
   echo "❌ GitHub CLI not authenticated. Run: gh auth login"
-  exit 1
-fi
-
-if ! command -v jpackage &> /dev/null; then
-  echo "❌ jpackage not available. Please install JDK 14+ or use Adoptium."
   exit 1
 fi
 
@@ -69,29 +57,24 @@ fi
 
 # --- UPDATE latest.txt ---
 echo "📝 Writing $LATEST_TXT..."
-echo "$VERSION_NUMBER" > $LATEST_TXT
-echo "$DOWNLOAD_URL" >> $LATEST_TXT
-
-# --- CLEAN AND PREP ---
-rm -rf "$BUILD_DIR"
-mkdir -p "$INPUT_DIR" "$OUTPUT_DIR"
-cp "$JAR_PATH" "$INPUT_DIR/CombiTry1.jar"
+echo "$VERSION_NUMBER" > "$LATEST_TXT"
+echo "$DOWNLOAD_URL" >> "$LATEST_TXT"
 
 # --- BUILD DMG ---
 echo "💿 Building DMG using jpackage..."
+rm -rf "$BUILD_DIR"
+mkdir -p "$BUILD_DIR/input"
+mkdir -p "$BUILD_DIR/output"
+cp "$JAR_PATH" "$BUILD_DIR/input/"
 
 jpackage \
-  --input "$INPUT_DIR" \
+  --input "$BUILD_DIR/input" \
   --main-jar "CombiTry1.jar" \
   --main-class "com.adikuric.Main" \
-  --type dmg \
   --name "CombiTry1" \
-  --dest "$OUTPUT_DIR" \
-  --java-options "-Xmx512m" \
-  $ICON_OPTION || {
-    echo "❌ Failed to create DMG."
-    exit 1
-}
+  --type dmg \
+  --dest "$BUILD_DIR/output" \
+  --java-options "-Xmx512m"
 
 # --- SUMMARY ---
 echo
@@ -110,14 +93,15 @@ if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
   exit 1
 fi
 
-# --- COMMIT & PUSH ---
-echo "📤 Committing changes..."
-git add .
+# --- COMMIT & PUSH CHANGES (excluding DMG) ---
+echo "📤 Committing changes (excluding DMG)..."
+git add -u
+git add "$VERSION_FILE" "$LATEST_TXT" "$UPDATER_FILE"
 git commit -m "Release $RELEASE_VERSION"
 git push origin main
 
-# --- CREATE RELEASE ---
-echo "🚀 Uploading to GitHub..."
+# --- CREATE RELEASE ON GITHUB ---
+echo "🚀 Uploading to GitHub Releases..."
 gh release create "$RELEASE_VERSION" \
   "$JAR_PATH" "$DMG_PATH" \
   --title "$RELEASE_TITLE" \
