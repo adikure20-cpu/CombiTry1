@@ -11,18 +11,14 @@ fi
 VERSION_NUMBER="$1"
 RELEASE_VERSION="v$VERSION_NUMBER"
 JAR_PATH="out/artifacts/CombiTry1_jar/CombiTry1.jar"
-DMG_NAME="CombiTry1.dmg"
-BUILD_DIR="build_release"
-DMG_PATH="$BUILD_DIR/output/$DMG_NAME"
-
 LATEST_TXT="latest.txt"
 REPO="adikure20-cpu/CombiTry1"
 RELEASE_TITLE="Version $RELEASE_VERSION"
 RELEASE_BODY="Automated release $RELEASE_VERSION with updated UI and logic."
 DOWNLOAD_URL="https://github.com/$REPO/releases/download/$RELEASE_VERSION/CombiTry1.jar"
-
 UPDATER_FILE="src/Updater.java"
 VERSION_FILE="version.txt"
+BUILD_DIR="build_release"
 
 # --- TOOLS CHECK ---
 if ! command -v gh &> /dev/null; then
@@ -57,54 +53,60 @@ fi
 
 # --- UPDATE latest.txt ---
 echo "📝 Writing $LATEST_TXT..."
-echo "$VERSION_NUMBER" > "$LATEST_TXT"
-echo "$DOWNLOAD_URL" >> "$LATEST_TXT"
+echo "$VERSION_NUMBER" > $LATEST_TXT
+echo "$DOWNLOAD_URL" >> $LATEST_TXT
 
-# --- BUILD DMG ---
-echo "💿 Building DMG using jpackage..."
-rm -rf "$BUILD_DIR"
-mkdir -p "$BUILD_DIR/input"
-mkdir -p "$BUILD_DIR/output"
-cp "$JAR_PATH" "$BUILD_DIR/input/"
-
-jpackage \
-  --input "$BUILD_DIR/input" \
-  --main-jar "CombiTry1.jar" \
-  --main-class "com.adikuric.Main" \
-  --name "CombiTry1" \
-  --type dmg \
-  --dest "$BUILD_DIR/output" \
-  --java-options "-Xmx512m"
-
-# --- SUMMARY ---
+# --- USER CONFIRMATION ---
 echo
 echo "📦 Ready to release:"
 echo "   Version:         $VERSION_NUMBER"
 echo "   JAR Path:        $JAR_PATH"
-echo "   DMG Path:        $DMG_PATH"
 echo "   Release Title:   $RELEASE_TITLE"
 echo "   Download URL:    $DOWNLOAD_URL"
 echo
 
-# --- USER CONFIRMATION ---
 read -p "⚠️  Proceed with commit, push, and release? (y/N): " confirm
 if [[ ! "$confirm" =~ ^[Yy]$ ]]; then
   echo "❌ Release cancelled."
   exit 1
 fi
 
-# --- COMMIT & PUSH CHANGES (excluding DMG) ---
-echo "📤 Committing changes (excluding DMG)..."
-git add -u
-git add "$VERSION_FILE" "$LATEST_TXT" "$UPDATER_FILE"
+# --- COMMIT & PUSH ---
+echo "📤 Committing changes..."
+git add .
 git commit -m "Release $RELEASE_VERSION"
 git push origin main
 
-# --- CREATE RELEASE ON GITHUB ---
+# --- OPTIONAL: Build DMG ---
+echo "💿 Building DMG using jpackage..."
+DMG_OUTPUT_DIR="$BUILD_DIR/output"
+INPUT_DIR="$BUILD_DIR/input"
+MAIN_CLASS="com.adikuric.Main"
+APP_NAME="CombiTry1"
+mkdir -p "$INPUT_DIR"
+cp "$JAR_PATH" "$INPUT_DIR/$APP_NAME.jar"
+
+jpackage \
+  --input "$INPUT_DIR" \
+  --main-jar "$APP_NAME.jar" \
+  --main-class "$MAIN_CLASS" \
+  --type dmg \
+  --name "$APP_NAME" \
+  --dest "$DMG_OUTPUT_DIR" \
+  --java-options "-Xmx512m"
+
+# --- FIND GENERATED DMG ---
+echo "🔍 Searching for .dmg..."
+DMG_PATH=$(find "$DMG_OUTPUT_DIR" -name "*.dmg" | head -n 1)
+if [ ! -f "$DMG_PATH" ]; then
+  echo "❌ DMG not found in $DMG_OUTPUT_DIR"
+  exit 1
+fi
+
+echo "💿 Found DMG: $DMG_PATH"
+
+# --- CREATE RELEASE ---
 echo "🚀 Uploading to GitHub Releases..."
-gh release create "$RELEASE_VERSION" \
-  "$JAR_PATH" "$DMG_PATH" \
-  --title "$RELEASE_TITLE" \
-  --notes "$RELEASE_BODY"
+gh release create "$RELEASE_VERSION" "$JAR_PATH" "$DMG_PATH" --title "$RELEASE_TITLE" --notes "$RELEASE_BODY"
 
 echo "✅ Done! Version $VERSION_NUMBER released and uploaded."
