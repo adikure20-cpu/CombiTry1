@@ -92,6 +92,12 @@ public class CodeDistributorApp {
         outer.setBorder(BorderFactory.createEmptyBorder(20, 40, 20, 40));
         outer.add(tabs, BorderLayout.CENTER);
 
+        // --- footer with version ---
+        JLabel versionLabel = new JLabel("V. " + Updater.CURRENT_VERSION);
+        versionLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        versionLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        outer.add(versionLabel, BorderLayout.SOUTH);
+
         frame.getContentPane().add(outer, BorderLayout.CENTER);
         frame.setVisible(true);
     }
