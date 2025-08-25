@@ -25,7 +25,7 @@ public class CodeDistributorApp {
     }
     private JPanel createSinglePerShopTab() {
         JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Single Per Shop Distribution", TitledBorder.LEFT, TitledBorder.TOP));
+        panel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder()));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(4, 5, 4, 5);
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -98,7 +98,7 @@ public class CodeDistributorApp {
 
     private JPanel createStandardDistributionTab() {
         JPanel inner = new JPanel(new GridBagLayout());
-        inner.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), "Standard Code Distribution", TitledBorder.LEFT, TitledBorder.TOP));
+        inner.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder()));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(4, 5, 4, 5);
         gbc.fill = GridBagConstraints.HORIZONTAL;
