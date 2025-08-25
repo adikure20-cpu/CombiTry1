@@ -16,7 +16,6 @@ public class CodeDistributorApp {
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(new FlatIntelliJLaf());
-            UIManager.put("defaultFont", new javax.swing.plaf.FontUIResource("Dialog", Font.PLAIN, 12));
         } catch (Exception e) {
             System.err.println("Failed to initialize FlatLaf: " + e.getMessage());
         }
@@ -92,12 +91,6 @@ public class CodeDistributorApp {
         JPanel outer = new JPanel(new BorderLayout());
         outer.setBorder(BorderFactory.createEmptyBorder(20, 40, 20, 40));
         outer.add(tabs, BorderLayout.CENTER);
-
-        // --- footer with version ---
-        JLabel versionLabel = new JLabel("V. " + Updater.CURRENT_VERSION);
-        versionLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-        versionLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-        outer.add(versionLabel, BorderLayout.SOUTH);
 
         frame.getContentPane().add(outer, BorderLayout.CENTER);
         frame.setVisible(true);
@@ -255,8 +248,8 @@ public class CodeDistributorApp {
         List<String> rest = new ArrayList<>();
         for (String id : all) if (!result.containsKey(id)) rest.add(id);
 
-        int each = !rest.isEmpty() ? remain / rest.size() : 0;
-        int extra = !rest.isEmpty() ? remain % rest.size() : 0;
+        int each = rest.size() > 0 ? remain / rest.size() : 0;
+        int extra = rest.size() > 0 ? remain % rest.size() : 0;
 
         for (String id : rest) {
             result.put(id, each + (extra-- > 0 ? 1 : 0));
