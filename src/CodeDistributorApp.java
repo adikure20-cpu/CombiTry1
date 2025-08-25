@@ -1,5 +1,5 @@
 import com.formdev.flatlaf.FlatIntelliJLaf;
-
+import javax.swing.text.*;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -23,6 +23,11 @@ public class CodeDistributorApp {
         Updater.checkForUpdates();
         SwingUtilities.invokeLater(() -> new CodeDistributorApp().initUI());
     }
+    private void limitNumeric(JTextField field, int maxDigits) {
+        AbstractDocument doc = (AbstractDocument) field.getDocument();
+        doc.setDocumentFilter(new NumericLimitFilter(maxDigits));
+    }
+
     private JPanel createSinglePerShopTab() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBorder(BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder()));
@@ -35,6 +40,12 @@ public class CodeDistributorApp {
         JTextField f10 = createFieldWithTooltip("€10 FB per shop");
         JTextField f5r = createFieldWithTooltip("€5 RFB per shop");
         JTextField f10r = createFieldWithTooltip("€10 RFB per shop");
+
+        // enforce digits only, max 6 chars
+        limitNumeric(f5,   6);
+        limitNumeric(f10,  6);
+        limitNumeric(f5r,  6);
+        limitNumeric(f10r, 6);
 
         JButton preview = new JButton("Preview & Confirm", UIManager.getIcon("FileView.detailsViewIcon"));
 
@@ -115,6 +126,12 @@ public class CodeDistributorApp {
         JTextField prio100 = createFieldWithTooltip("Shop IDs with 100 code priority (space or comma separated)");
         JTextField prio50 = createFieldWithTooltip("Shop IDs with 50 code priority (space or comma separated)");
 
+        ((AbstractDocument) total5.getDocument()).setDocumentFilter(new NumericLimitFilter(5));
+        ((AbstractDocument) total10.getDocument()).setDocumentFilter(new NumericLimitFilter(5));
+        ((AbstractDocument) total5RFB.getDocument()).setDocumentFilter(new NumericLimitFilter(5));
+        ((AbstractDocument) total10RFB.getDocument()).setDocumentFilter(new NumericLimitFilter(5));
+
+
         JButton previewButton = new JButton("Preview & Confirm", UIManager.getIcon("FileView.detailsViewIcon"));
 
         int row = 0;
@@ -190,7 +207,7 @@ public class CodeDistributorApp {
     }
 
     private JTextField createFieldWithTooltip(String tooltip) {
-        JTextField field = new JTextField(20);
+        JTextField field = new JTextField(50);
         field.setToolTipText(tooltip);
         return field;
     }
@@ -324,4 +341,34 @@ public class CodeDistributorApp {
         gbc.insets = new Insets(4, 5, 4, 5);
         return gbc;
     }
+
+
+    class NumericLimitFilter extends DocumentFilter {
+        private final int maxLength;
+
+        public NumericLimitFilter(int maxLength) {
+            this.maxLength = maxLength;
+        }
+
+        @Override
+        public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr)
+                throws BadLocationException {
+            if (string != null && string.matches("\\d*")) {
+                if (fb.getDocument().getLength() + string.length() <= maxLength) {
+                    super.insertString(fb, offset, string, attr);
+                }
+            }
+        }
+
+        @Override
+        public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs)
+                throws BadLocationException {
+            if (text != null && text.matches("\\d*")) {
+                if (fb.getDocument().getLength() - length + text.length() <= maxLength) {
+                    super.replace(fb, offset, length, text, attrs);
+                }
+            }
+        }
+    }
+
 }
