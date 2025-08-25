@@ -133,13 +133,13 @@ public class CodeDistributorApp {
         inner.add(new JLabel("Total €10 RFB Codes:"), gbc(0, row));
         inner.add(total10RFB, gbc(1, row++));
 
-        inner.add(new JLabel("Priority 200:"), gbc(0, row));
+        inner.add(new JLabel("Priority 200 (ACID):"), gbc(0, row));
         inner.add(prio200, gbc(1, row++));
 
-        inner.add(new JLabel("Priority 100:"), gbc(0, row));
+        inner.add(new JLabel("Priority 100 (ACID):"), gbc(0, row));
         inner.add(prio100, gbc(1, row++));
 
-        inner.add(new JLabel("Priority 50:"), gbc(0, row));
+        inner.add(new JLabel("Priority 50 (ACID):"), gbc(0, row));
         inner.add(prio50, gbc(1, row++));
 
         gbc.gridwidth = 2;
