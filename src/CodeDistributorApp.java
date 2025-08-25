@@ -16,6 +16,7 @@ public class CodeDistributorApp {
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(new FlatIntelliJLaf());
+            UIManager.put("defaultFont", new javax.swing.plaf.FontUIResource("Dialog", Font.PLAIN, 12));
         } catch (Exception e) {
             System.err.println("Failed to initialize FlatLaf: " + e.getMessage());
         }
