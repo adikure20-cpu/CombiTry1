@@ -248,8 +248,8 @@ public class CodeDistributorApp {
         List<String> rest = new ArrayList<>();
         for (String id : all) if (!result.containsKey(id)) rest.add(id);
 
-        int each = rest.size() > 0 ? remain / rest.size() : 0;
-        int extra = rest.size() > 0 ? remain % rest.size() : 0;
+        int each = !rest.isEmpty() ? remain / rest.size() : 0;
+        int extra = !rest.isEmpty() ? remain % rest.size() : 0;
 
         for (String id : rest) {
             result.put(id, each + (extra-- > 0 ? 1 : 0));
