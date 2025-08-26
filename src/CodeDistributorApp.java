@@ -1,9 +1,11 @@
 import com.formdev.flatlaf.FlatIntelliJLaf;
 import javax.swing.text.*;
 import javax.swing.*;
-import javax.swing.border.TitledBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.text.JTextComponent;
 import java.awt.*;
 import java.io.*;
 import java.util.*;
@@ -31,7 +33,7 @@ public class CodeDistributorApp {
     private void stylePrimary(JButton b) {
         b.putClientProperty("JButton.buttonType", "roundRect");
         b.putClientProperty("FlatLaf.style",
-                "background: #1976D2; " +          // blue
+                "background: #1976D2; " +
                         "arc: 18; " +
                         "focusWidth: 1; " +
                         "borderColor: #1565C0; " +
@@ -45,7 +47,7 @@ public class CodeDistributorApp {
     private void styleSecondary(JButton b) {
         b.putClientProperty("JButton.buttonType", "roundRect");
         b.putClientProperty("FlatLaf.style",
-                "background: #E0E0E0; " +          // light grey
+                "background: #E0E0E0; " +
                         "arc: 18; " +
                         "focusWidth: 1; " +
                         "borderColor: #BDBDBD; " +
@@ -55,18 +57,20 @@ public class CodeDistributorApp {
         b.setForeground(Color.BLACK);
         b.setFocusPainted(false);
     }
-    private void styleInteractive(JButton b) {
-        b.putClientProperty("JButton.buttonType", "roundRect");
-        b.putClientProperty("FlatLaf.style",
-                "background: #E0E0E0; " +        // normal (grey)
-                        "arc: 18; " +
-                        "focusWidth: 1; " +
-                        "borderColor: #BDBDBD; " +
-                        "hoverBackground: #1E88E5; " +  // hover = blue
-                        "pressedBackground: #1976D2"    // pressed = deeper blue
-        );
-        b.setForeground(Color.BLACK);           // readable on grey
-        b.setFocusPainted(false);
+
+    private void applyButtonState(JButton b, boolean active) {
+        if (active) {
+            stylePrimary(b);
+            b.setEnabled(true);
+        } else {
+            styleSecondary(b);
+            b.setEnabled(false);
+        }
+        b.putClientProperty("JButton.defaultButton", Boolean.FALSE);
+        SwingUtilities.invokeLater(() -> {
+            JRootPane rp = frame != null ? frame.getRootPane() : null;
+            if (rp != null && rp.getDefaultButton() == b) rp.setDefaultButton(null);
+        });
     }
 
     private JPanel createSinglePerShopTab() {
@@ -88,7 +92,11 @@ public class CodeDistributorApp {
         limitNumeric(f10r, 6);
 
         JButton preview = new JButton("Preview & Confirm", UIManager.getIcon("FileView.detailsViewIcon"));
-        stylePrimary(preview);
+        applyButtonState(preview, false);
+        f5.setEnabled(false);
+        f10.setEnabled(false);
+        f5r.setEnabled(false);
+        f10r.setEnabled(false);
 
         int row = 0;
         panel.add(new JLabel("Shop IDs:"), gbc(0, row));
@@ -109,9 +117,23 @@ public class CodeDistributorApp {
         gbc.gridwidth = 2;
         panel.add(preview, gbc(0, row++));
 
+        Runnable unlockIfAnyId = () -> {
+            boolean hasId = !parseList(acid.getText()).isEmpty();
+            f5.setEnabled(hasId);
+            f10.setEnabled(hasId);
+            f5r.setEnabled(hasId);
+            f10r.setEnabled(hasId);
+            applyButtonState(preview, hasId);
+        };
+        addDocListener(acid, unlockIfAnyId);
+
         preview.addActionListener(e -> {
             try {
                 List<String> ids = parseList(acid.getText());
+                if (ids.isEmpty()) {
+                    showMessage("Add at least one Shop ID.");
+                    return;
+                }
                 int v5 = parse(f5.getText()), v10 = parse(f10.getText());
                 int v5r = parse(f5r.getText()), v10r = parse(f10r.getText());
                 Map<String, Integer> m5 = mapFixed(ids, v5);
@@ -154,7 +176,7 @@ public class CodeDistributorApp {
 
         JLabel fileLabel = new JLabel("No file selected");
         JButton uploadButton = new JButton("Upload CSV", UIManager.getIcon("FileView.directoryIcon"));
-        stylePrimary(uploadButton);
+        styleSecondary(uploadButton);
 
         JTextField total5 = createFieldWithTooltip("Total number of €5 codes to distribute (FB)");
         JTextField total10 = createFieldWithTooltip("Total number of €10 codes to distribute (FB)");
@@ -171,7 +193,15 @@ public class CodeDistributorApp {
         ((AbstractDocument) total10RFB.getDocument()).setDocumentFilter(new NumericLimitFilter(5));
 
         JButton previewButton = new JButton("Preview & Confirm", UIManager.getIcon("FileView.detailsViewIcon"));
-        stylePrimary(previewButton);
+        applyButtonState(previewButton, false);
+
+        total5.setEnabled(false);
+        total10.setEnabled(false);
+        total5RFB.setEnabled(false);
+        total10RFB.setEnabled(false);
+        prio200.setEnabled(false);
+        prio100.setEnabled(false);
+        prio50.setEnabled(false);
 
         int row = 0;
         inner.add(uploadButton, gbc(0, row));
@@ -207,6 +237,14 @@ public class CodeDistributorApp {
             if (chooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
                 selectedCSV = chooser.getSelectedFile();
                 fileLabel.setText("✔ " + selectedCSV.getName());
+                total5.setEnabled(true);
+                total10.setEnabled(true);
+                total5RFB.setEnabled(true);
+                total10RFB.setEnabled(true);
+                prio200.setEnabled(true);
+                prio100.setEnabled(true);
+                prio50.setEnabled(true);
+                applyButtonState(previewButton, true);
             }
         });
 
@@ -219,23 +257,18 @@ public class CodeDistributorApp {
                 List<String> shops = loadShopIds(selectedCSV);
                 int val5 = parse(total5.getText()), val10 = parse(total10.getText());
                 int val5r = parse(total5RFB.getText()), val10r = parse(total10RFB.getText());
-
                 List<String> p200 = parsePriorities(prio200.getText(), shops);
                 List<String> p100 = parsePriorities(prio100.getText(), shops);
                 List<String> p50 = parsePriorities(prio50.getText(), shops);
-
                 validate(val5, p200.size(), p100.size(), p50.size());
                 validate(val10, p200.size(), p100.size(), p50.size());
-
                 Map<String, Integer> m5 = distribute(shops, p200, p100, p50, val5);
                 Map<String, Integer> m10 = distribute(shops, p200, p100, p50, val10);
                 Map<String, Integer> m5r = val5r > 0 ? distribute(shops, p200, p100, p50, val5r) : zeroMap(shops);
                 Map<String, Integer> m10r = val10r > 0 ? distribute(shops, p200, p100, p50, val10r) : zeroMap(shops);
-
                 List<String> ordered = new ArrayList<>();
                 ordered.addAll(p200); ordered.addAll(p100); ordered.addAll(p50);
                 for (String s : shops) if (!ordered.contains(s)) ordered.add(s);
-
                 preview(ordered, m5, m10, m5r, m10r, "Code_Distribution_Output.csv");
             } catch (Exception ex) {
                 showMessage("❌ Error: " + ex.getMessage());
@@ -243,6 +276,23 @@ public class CodeDistributorApp {
         });
 
         return inner;
+    }
+
+    private void addDocListener(JTextComponent c, Runnable r) {
+        Document d = c.getDocument();
+        if (d instanceof AbstractDocument) {
+            ((AbstractDocument) d).addDocumentListener(new DocumentListener() {
+                public void insertUpdate(DocumentEvent e) { r.run(); }
+                public void removeUpdate(DocumentEvent e) { r.run(); }
+                public void changedUpdate(DocumentEvent e) { r.run(); }
+            });
+        } else {
+            d.addDocumentListener(new DocumentListener() {
+                public void insertUpdate(DocumentEvent e) { r.run(); }
+                public void removeUpdate(DocumentEvent e) { r.run(); }
+                public void changedUpdate(DocumentEvent e) { r.run(); }
+            });
+        }
     }
 
     private JTextField createFieldWithTooltip(String tooltip) {
@@ -263,11 +313,9 @@ public class CodeDistributorApp {
                     m10r.getOrDefault(id, 0)
             });
         }
-
         JTable table = new JTable(model);
         JScrollPane scroll = new JScrollPane(table);
         scroll.setPreferredSize(new Dimension(800, 350));
-
         int opt = JOptionPane.showConfirmDialog(frame, scroll, "Confirm Export", JOptionPane.OK_CANCEL_OPTION);
         if (opt == JOptionPane.OK_OPTION) {
             try (PrintWriter pw = new PrintWriter(new FileWriter(System.getProperty("user.home") + "/Desktop/" + filename))) {
@@ -295,22 +343,15 @@ public class CodeDistributorApp {
     private Map<String, Integer> distribute(List<String> all, List<String> p200, List<String> p100, List<String> p50, int total) {
         Map<String, Integer> result = new LinkedHashMap<>();
         int fixed = 0;
-
         for (String id : p200) { result.put(id, 200); fixed += 200; }
-        for (String id : p100) { result.put(id, 100); fixed += 100; }
-        for (String id : p50)  { result.put(id, 50);  fixed += 50;  }
-
+        for (String id : p100) { if (!result.containsKey(id)) { result.put(id, 100); fixed += 100; } }
+        for (String id : p50)  { if (!result.containsKey(id)) { result.put(id, 50);  fixed += 50;  } }
         int remain = total - fixed;
         List<String> rest = new ArrayList<>();
         for (String id : all) if (!result.containsKey(id)) rest.add(id);
-
-        int each = rest.size() > 0 ? remain / rest.size() : 0;
-        int extra = rest.size() > 0 ? remain % rest.size() : 0;
-
-        for (String id : rest) {
-            result.put(id, each + (extra-- > 0 ? 1 : 0));
-        }
-
+        int each = rest.size() > 0 ? Math.max(0, remain) / rest.size() : 0;
+        int extra = rest.size() > 0 ? Math.max(0, remain) % rest.size() : 0;
+        for (String id : rest) result.put(id, each + (extra-- > 0 ? 1 : 0));
         return result;
     }
 
@@ -326,10 +367,18 @@ public class CodeDistributorApp {
         return map;
     }
 
+    private String norm(String s) {
+        String d = s == null ? "" : s.replaceAll("[^0-9]", "");
+        d = d.replaceFirst("^0+", "");
+        return d.isEmpty() ? "0" : d;
+    }
+
     private List<String> parsePriorities(String raw, List<String> base) {
+        Set<String> baseSet = new LinkedHashSet<>(base);
         Set<String> set = new LinkedHashSet<>();
         for (String s : raw.split("[,\\s]+")) {
-            if (base.contains(s.trim())) set.add(s.trim());
+            String id = norm(s);
+            if (!id.isEmpty() && baseSet.contains(id)) set.add(id);
         }
         return new ArrayList<>(set);
     }
@@ -337,7 +386,7 @@ public class CodeDistributorApp {
     private List<String> parseList(String input) {
         Set<String> set = new LinkedHashSet<>();
         for (String s : input.split("[,\\s]+")) {
-            String id = s.trim().replaceAll("[^0-9]", "");
+            String id = norm(s);
             if (!id.isEmpty()) set.add(id);
         }
         return new ArrayList<>(set);
@@ -348,7 +397,8 @@ public class CodeDistributorApp {
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = br.readLine()) != null) {
-                String id = line.split("[;,\\s]")[0].replaceAll("[^0-9]", "").trim();
+                String first = line.split("[;,\\s]")[0];
+                String id = norm(first);
                 if (!id.isEmpty()) ids.add(id);
             }
         }
