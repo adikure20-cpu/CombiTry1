@@ -19,13 +19,54 @@ public class CodeDistributorApp {
         } catch (Exception e) {
             System.err.println("Failed to initialize FlatLaf: " + e.getMessage());
         }
-
         Updater.checkForUpdates();
         SwingUtilities.invokeLater(() -> new CodeDistributorApp().initUI());
     }
+
     private void limitNumeric(JTextField field, int maxDigits) {
         AbstractDocument doc = (AbstractDocument) field.getDocument();
         doc.setDocumentFilter(new NumericLimitFilter(maxDigits));
+    }
+
+    private void stylePrimary(JButton b) {
+        b.putClientProperty("JButton.buttonType", "roundRect");
+        b.putClientProperty("FlatLaf.style",
+                "background: #1976D2; " +          // blue
+                        "arc: 18; " +
+                        "focusWidth: 1; " +
+                        "borderColor: #1565C0; " +
+                        "hoverBackground: #1E88E5; " +
+                        "pressedBackground: #0D47A1"
+        );
+        b.setForeground(Color.WHITE);
+        b.setFocusPainted(false);
+    }
+
+    private void styleSecondary(JButton b) {
+        b.putClientProperty("JButton.buttonType", "roundRect");
+        b.putClientProperty("FlatLaf.style",
+                "background: #E0E0E0; " +          // light grey
+                        "arc: 18; " +
+                        "focusWidth: 1; " +
+                        "borderColor: #BDBDBD; " +
+                        "hoverBackground: #EEEEEE; " +
+                        "pressedBackground: #BDBDBD"
+        );
+        b.setForeground(Color.BLACK);
+        b.setFocusPainted(false);
+    }
+    private void styleInteractive(JButton b) {
+        b.putClientProperty("JButton.buttonType", "roundRect");
+        b.putClientProperty("FlatLaf.style",
+                "background: #E0E0E0; " +        // normal (grey)
+                        "arc: 18; " +
+                        "focusWidth: 1; " +
+                        "borderColor: #BDBDBD; " +
+                        "hoverBackground: #1E88E5; " +  // hover = blue
+                        "pressedBackground: #1976D2"    // pressed = deeper blue
+        );
+        b.setForeground(Color.BLACK);           // readable on grey
+        b.setFocusPainted(false);
     }
 
     private JPanel createSinglePerShopTab() {
@@ -41,13 +82,13 @@ public class CodeDistributorApp {
         JTextField f5r = createFieldWithTooltip("€5 RFB per shop");
         JTextField f10r = createFieldWithTooltip("€10 RFB per shop");
 
-        // enforce digits only, max 6 chars
-        limitNumeric(f5,   6);
-        limitNumeric(f10,  6);
-        limitNumeric(f5r,  6);
+        limitNumeric(f5, 6);
+        limitNumeric(f10, 6);
+        limitNumeric(f5r, 6);
         limitNumeric(f10r, 6);
 
         JButton preview = new JButton("Preview & Confirm", UIManager.getIcon("FileView.detailsViewIcon"));
+        stylePrimary(preview);
 
         int row = 0;
         panel.add(new JLabel("Shop IDs:"), gbc(0, row));
@@ -73,12 +114,10 @@ public class CodeDistributorApp {
                 List<String> ids = parseList(acid.getText());
                 int v5 = parse(f5.getText()), v10 = parse(f10.getText());
                 int v5r = parse(f5r.getText()), v10r = parse(f10r.getText());
-
                 Map<String, Integer> m5 = mapFixed(ids, v5);
                 Map<String, Integer> m10 = mapFixed(ids, v10);
                 Map<String, Integer> m5rb = mapFixed(ids, v5r);
                 Map<String, Integer> m10rb = mapFixed(ids, v10r);
-
                 preview(ids, m5, m10, m5rb, m10rb, "Single_Shop_Codes.csv");
             } catch (Exception ex) {
                 showMessage("❌ Error: " + ex.getMessage());
@@ -87,7 +126,6 @@ public class CodeDistributorApp {
 
         return panel;
     }
-
 
     private void initUI() {
         frame = new JFrame("Code Distributor Tool");
@@ -116,6 +154,7 @@ public class CodeDistributorApp {
 
         JLabel fileLabel = new JLabel("No file selected");
         JButton uploadButton = new JButton("Upload CSV", UIManager.getIcon("FileView.directoryIcon"));
+        stylePrimary(uploadButton);
 
         JTextField total5 = createFieldWithTooltip("Total number of €5 codes to distribute (FB)");
         JTextField total10 = createFieldWithTooltip("Total number of €10 codes to distribute (FB)");
@@ -131,8 +170,8 @@ public class CodeDistributorApp {
         ((AbstractDocument) total5RFB.getDocument()).setDocumentFilter(new NumericLimitFilter(5));
         ((AbstractDocument) total10RFB.getDocument()).setDocumentFilter(new NumericLimitFilter(5));
 
-
         JButton previewButton = new JButton("Preview & Confirm", UIManager.getIcon("FileView.detailsViewIcon"));
+        stylePrimary(previewButton);
 
         int row = 0;
         inner.add(uploadButton, gbc(0, row));
@@ -342,27 +381,19 @@ public class CodeDistributorApp {
         return gbc;
     }
 
-
     class NumericLimitFilter extends DocumentFilter {
         private final int maxLength;
-
-        public NumericLimitFilter(int maxLength) {
-            this.maxLength = maxLength;
-        }
-
+        public NumericLimitFilter(int maxLength) { this.maxLength = maxLength; }
         @Override
-        public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr)
-                throws BadLocationException {
+        public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException {
             if (string != null && string.matches("\\d*")) {
                 if (fb.getDocument().getLength() + string.length() <= maxLength) {
                     super.insertString(fb, offset, string, attr);
                 }
             }
         }
-
         @Override
-        public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs)
-                throws BadLocationException {
+        public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException {
             if (text != null && text.matches("\\d*")) {
                 if (fb.getDocument().getLength() - length + text.length() <= maxLength) {
                     super.replace(fb, offset, length, text, attrs);
@@ -370,5 +401,4 @@ public class CodeDistributorApp {
             }
         }
     }
-
 }
