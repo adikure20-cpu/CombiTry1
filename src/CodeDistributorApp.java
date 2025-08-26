@@ -21,8 +21,22 @@ public class CodeDistributorApp {
         } catch (Exception e) {
             System.err.println("Failed to initialize FlatLaf: " + e.getMessage());
         }
-        Updater.checkForUpdates();
-        SwingUtilities.invokeLater(() -> new CodeDistributorApp().initUI());
+        SwingUtilities.invokeLater(() -> {
+            Splash splash = new Splash();
+            splash.setVisible(true);
+            new SwingWorker<Void, Void>() {
+                @Override
+                protected Void doInBackground() {
+                    Updater.checkForUpdates();
+                    return null;
+                }
+                @Override
+                protected void done() {
+                    new CodeDistributorApp().initUI();
+                    splash.dispose();
+                }
+            }.execute();
+        });
     }
 
     private void limitNumeric(JTextField field, int maxDigits) {
@@ -449,6 +463,27 @@ public class CodeDistributorApp {
                     super.replace(fb, offset, length, text, attrs);
                 }
             }
+        }
+    }
+
+    static class Splash extends JWindow {
+        Splash() {
+            JPanel p = new JPanel(new BorderLayout(12, 12));
+            p.setBorder(BorderFactory.createEmptyBorder(16, 24, 16, 24));
+            JLabel title = new JLabel("Code Distributor Tool");
+            title.setFont(title.getFont().deriveFont(Font.BOLD, 18f));
+            title.setHorizontalAlignment(SwingConstants.CENTER);
+            JProgressBar bar = new JProgressBar();
+            bar.setIndeterminate(true);
+            JLabel sub = new JLabel("Loading...");
+            sub.setHorizontalAlignment(SwingConstants.CENTER);
+            p.add(title, BorderLayout.NORTH);
+            p.add(bar, BorderLayout.CENTER);
+            p.add(sub, BorderLayout.SOUTH);
+            setContentPane(p);
+            pack();
+            Dimension s = Toolkit.getDefaultToolkit().getScreenSize();
+            setLocation((s.width - getWidth()) / 2, (s.height - getHeight()) / 2);
         }
     }
 }
