@@ -23,16 +23,31 @@ public class CodeDistributorApp {
     private List<String> shopsCache = new ArrayList<>();
 
     public static void main(String[] args) {
-        try { UIManager.setLookAndFeel(new FlatIntelliJLaf()); } catch (Exception e) { System.err.println("Failed to initialize FlatLaf: " + e.getMessage()); }
+        try {
+            UIManager.setLookAndFeel(new FlatIntelliJLaf());
+        } catch (Exception e) {
+            System.err.println("Failed to initialize FlatLaf: " + e.getMessage());
+        }
+
+        try {
+            SwingUtilities.invokeAndWait(() -> Updater.checkForUpdates());
+        } catch (Exception e) {
+            System.err.println("Update check failed: " + e.getMessage());
+        }
+
         SwingUtilities.invokeLater(() -> {
             Splash splash = new Splash();
             splash.setVisible(true);
             new SwingWorker<Void, Void>() {
-                protected Void doInBackground() { Updater.checkForUpdates(); return null; }
-                protected void done() { new CodeDistributorApp().initUI(); splash.dispose(); }
+                @Override protected Void doInBackground() { return null; }
+                @Override protected void done() {
+                    new CodeDistributorApp().initUI();
+                    splash.dispose();
+                }
             }.execute();
         });
     }
+
 
     private void limitNumeric(JTextField field, int maxDigits) {
         AbstractDocument doc = (AbstractDocument) field.getDocument();
@@ -440,6 +455,7 @@ public class CodeDistributorApp {
 
     static class Splash extends JWindow {
         Splash() {
+            setAlwaysOnTop(false);
             JPanel p = new JPanel(new BorderLayout(12, 12));
             p.setBorder(BorderFactory.createEmptyBorder(16, 24, 16, 24));
             JLabel title = new JLabel("Code Distributor Tool");
