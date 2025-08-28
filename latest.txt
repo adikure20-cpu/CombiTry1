@@ -1,2 +1,2 @@
-1.0.53
-https://github.com/adikure20-cpu/CodeDistributorApp/releases/download/v1.0.53/CodeDistributorApp.jar
+1.0.54
+https://github.com/adikure20-cpu/CodeDistributorApp/releases/download/v1.0.54/CodeDistributorApp.jar
